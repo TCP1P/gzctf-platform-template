@@ -1,0 +1,105 @@
+# Config, secrets, RBAC for the gzctf platform.
+#
+# BEFORE FIRST APPLY:
+#   - Change PUBLIC_ENTRY to your real hostname
+#   - Change postgres-password + emailconfig-password to strong values
+#     (or generate them with: kubectl create secret generic gzctf-secrets ...)
+#   - If you don't have an SMTP relay, comment out EmailConfig entirely
+#     (admin can still log in with seeded credentials)
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gzctf-secrets
+  namespace: gzctf
+type: Opaque
+stringData:
+  # Strong, random — gets passed to postgres on first boot.
+  postgres-password: "CHANGE_ME_postgres_password"
+  # Admin password applied via init job (see 40-gzctf.yaml).
+  admin-password: "CHANGE_ME_admin_password"
+  # Optional: SMTP relay credentials. Remove if not used.
+  smtp-username: ""
+  smtp-password: ""
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gzctf-appsettings
+  namespace: gzctf
+data:
+  appsettings.json: |
+    {
+      "AllowedHosts": "*",
+      "ConnectionStrings": {
+        "Database": "Host=postgres;Database=gzctf;Username=postgres;Password=__POSTGRES_PASSWORD__",
+        "RedisCache": "redis:6379,abortConnect=false"
+      },
+      "ContainerProvider": {
+        "Type": "Kubernetes",
+        "PublicEntry": "challenges.example.com",
+        "PortMappingType": "PlatformProxy",
+        "EnableTrafficCapture": true,
+        "KubernetesConfig": {
+          "Namespace": "gzctf-challenges",
+          "AllowCIDR": [ "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" ],
+          "DNS": [ "8.8.8.8", "1.1.1.1" ]
+        }
+      },
+      "RequestLogging": false,
+      "DisableRateLimit": false,
+      "RegistryConfig": {
+        "UserName": "",
+        "Password": "",
+        "ServerAddress": ""
+      },
+      "CaptchaConfig": { "Provider": "None" },
+      "ForwardedOptions": {
+        "ForwardedHeaders": 5,
+        "ForwardLimit": 1,
+        "TrustedNetworks": [ "0.0.0.0/0", "::/0" ]
+      }
+    }
+
+---
+# Service account used by the gzctf pod to spawn challenge pods in
+# the gzctf-challenges namespace. Scoped tight — only what the
+# Kubernetes provider in GZCTF actually needs.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gzctf
+  namespace: gzctf
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gzctf-challenge-manager
+  namespace: gzctf-challenges
+rules:
+  - apiGroups: [""]
+    resources: [pods, services, configmaps, secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods/log, pods/exec, pods/portforward]
+    verbs: [get, list, create]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [get, list, watch]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gzctf-challenge-manager
+  namespace: gzctf-challenges
+subjects:
+  - kind: ServiceAccount
+    name: gzctf
+    namespace: gzctf
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gzctf-challenge-manager

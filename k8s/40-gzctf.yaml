@@ -1,0 +1,92 @@
+# gzctf platform — pulls image gztime/gzctf:latest.
+# Uses an init container to substitute the postgres password into
+# appsettings.json (mounted from the ConfigMap, can't templatize at
+# rest without a third-party tool). The result lands on an emptyDir
+# read by the main container.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gzctf-files
+  namespace: gzctf
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gzctf
+  namespace: gzctf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate     # single-process app; in-memory state not shared
+  selector: { matchLabels: { app: gzctf } }
+  template:
+    metadata: { labels: { app: gzctf } }
+    spec:
+      serviceAccountName: gzctf
+      initContainers:
+        # Inline the postgres password from the secret into the
+        # config's ConnectionStrings.Database value. Without this step
+        # the gzctf container would see __POSTGRES_PASSWORD__ literally.
+        - name: render-config
+          image: alpine:3.20
+          command:
+            - sh
+            - -c
+            - >-
+              sed "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g"
+              /tmpl/appsettings.json > /rendered/appsettings.json
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gzctf-secrets
+                  key: postgres-password
+          volumeMounts:
+            - { name: appsettings-tmpl, mountPath: /tmpl }
+            - { name: appsettings-rendered, mountPath: /rendered }
+      containers:
+        - name: gzctf
+          image: gztime/gzctf:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: LC_ALL
+              value: en_US.UTF-8
+          volumeMounts:
+            - { name: gzctf-files, mountPath: /app/files }
+            - { name: appsettings-rendered, mountPath: /app/appsettings.json, subPath: appsettings.json, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: 8080 }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits:   { cpu: "2",  memory: 2Gi }
+      volumes:
+        - name: gzctf-files
+          persistentVolumeClaim:
+            claimName: gzctf-files
+        - name: appsettings-tmpl
+          configMap:
+            name: gzctf-appsettings
+        - name: appsettings-rendered
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gzctf
+  namespace: gzctf
+spec:
+  selector: { app: gzctf }
+  ports:
+    - { name: http, port: 80, targetPort: 8080 }

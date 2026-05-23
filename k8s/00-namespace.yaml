@@ -1,0 +1,14 @@
+# Two namespaces:
+# - `gzctf`            platform (gzctf + db + cache)
+# - `gzctf-challenges` per-team challenge pods spawned by the platform
+#                      at runtime; isolated so an attacker that escapes
+#                      a challenge container can't see platform pods.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gzctf
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gzctf-challenges

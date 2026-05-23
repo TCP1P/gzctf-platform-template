@@ -1,0 +1,68 @@
+# postgres 17, single replica, persistent storage.
+# Default storageClassName is the cluster default — on k3s that's
+# `local-path` (single-node). Override per the README for multi-node.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: gzctf
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: gzctf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate     # never run two pods against the same PVC
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gzctf-secrets
+                  key: postgres-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, postgres]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: [pg_isready, -U, postgres]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 200m, memory: 256Mi }
+            limits:   { cpu: "2",  memory: 2Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: gzctf
+spec:
+  selector: { app: postgres }
+  ports:
+    - { port: 5432, targetPort: 5432 }

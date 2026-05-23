@@ -1,0 +1,39 @@
+# redis cache (gzctf uses it for SignalR backplane + general caching).
+# Stateless — no PVC. If you restart redis, in-flight realtime events
+# are lost; scoreboard recovers from postgres on next request.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: gzctf
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata: { labels: { app: redis } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:alpine
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec: { command: [redis-cli, ping] }
+            periodSeconds: 5
+          livenessProbe:
+            exec: { command: [redis-cli, ping] }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m,  memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: gzctf
+spec:
+  selector: { app: redis }
+  ports:
+    - { port: 6379, targetPort: 6379 }

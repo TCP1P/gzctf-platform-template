@@ -1,0 +1,32 @@
+# Public ingress for gzctf.
+# Default = Traefik (k3s ships with it; same path the docker-compose
+# template uses via its `compose.traefik.yml` overlay).
+#
+# For nginx-ingress or others, swap the ingressClassName + tls
+# annotation block to match your setup.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gzctf
+  namespace: gzctf
+  annotations:
+    # k3s Traefik built-in resolver. If using cert-manager instead,
+    # remove these and add: cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ctf.example.com         # ← CHANGE ME (match appsettings PublicEntry)
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gzctf
+                port: { number: 80 }
+  tls:
+    - hosts: [ctf.example.com]      # ← CHANGE ME
+      secretName: gzctf-tls         # auto-populated by the chosen issuer
