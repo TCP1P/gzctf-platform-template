@@ -8,16 +8,16 @@ Adapted from [gzcli's `ctf-template`](https://github.com/dimasma0305/gzcli/tree/
 
 | Path | Use when | Time-to-running |
 |---|---|---|
-| **[docker-compose](#docker-compose)** (`.gzctf/` + `Makefile`) | Single VPS, you control the docker daemon, you want `gzcli sync` to manage challenges | ~2 minutes after edits |
+| **[docker-compose](#docker-compose)** (`compose/` + `Makefile`) | Single VPS, you control the docker daemon, you want `gzcli sync` to manage challenges | ~2 minutes after edits |
 | **[Kubernetes / k3s](#kubernetes--k3s)** (`k8s/`) | Multi-node cluster, you want native Pod isolation per challenge, you have an Ingress controller | ~5 minutes after edits |
 
 ## docker-compose
 
 ```sh
 # 1. Seed your operator config (never commit this file)
-cp .gzctf/appsettings.example.json .gzctf/appsettings.json
-$EDITOR .gzctf/.env              # WORKSPACE, PUBLIC_ENTRY, ACME email
-$EDITOR .gzctf/appsettings.json  # admin seed password + DB password + (optional) SMTP
+cp compose/appsettings.example.json compose/appsettings.json
+$EDITOR compose/.env              # WORKSPACE, PUBLIC_ENTRY, ACME email
+$EDITOR compose/appsettings.json  # admin seed password + DB password + (optional) SMTP
 
 # 2. Create the `traefik` docker network + start everything
 make setup        # idempotent: creates the external `traefik` network
@@ -38,10 +38,10 @@ Run `make help` for the full target list. The most useful day-to-day:
 | `make flush-cache` | wipe redis (scoreboard rebuilds on next request) |
 | `make init-admin` | promote the seeded admin to Admin role |
 
-Final layout under `.gzctf/`:
+Final layout under `compose/`:
 
 ```
-.gzctf/
+compose/
 ├── .env                          # WORKSPACE / PUBLIC_ENTRY / ACME email
 ├── appsettings.example.json      # template — copy to appsettings.json before first up
 ├── compose.yml                   # main stack (gzctf, db, cache)
@@ -83,7 +83,7 @@ See [`k8s/README.md`](k8s/README.md) for the full walk-through including:
 
 ```sh
 # docker-compose
-docker compose -f .gzctf/compose.yml pull && make platform-up
+docker compose -f compose/compose.yml pull && make platform-up
 
 # kubernetes
 kubectl -n gzctf rollout restart deploy/gzctf

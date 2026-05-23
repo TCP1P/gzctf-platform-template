@@ -1,7 +1,7 @@
 # Kubernetes / k3s deployment
 
 Apply-in-order manifests for running GZCTF on k3s (or any other k8s
-distribution). Mirrors the docker-compose path under `.gzctf/` but
+distribution). Mirrors the docker-compose path under `compose/` but
 swaps the `ContainerProvider` to `Kubernetes` so challenge instances
 spawn as pods inside the `gzctf-challenges` namespace instead of via
 the host's docker socket.
@@ -40,7 +40,7 @@ once cert-manager (or Traefik's built-in ACME) issues a TLS cert.
 
 ## Differences from the docker-compose path
 
-| Concern | docker-compose (`.gzctf/`) | kubernetes (`k8s/`) |
+| Concern | docker-compose (`compose/`) | kubernetes (`k8s/`) |
 |---|---|---|
 | Challenge spawning | host docker socket | in-cluster ServiceAccount → spawns Pods in `gzctf-challenges` ns |
 | Public entry | Traefik container on host | Cluster Ingress |

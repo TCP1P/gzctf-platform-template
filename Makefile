@@ -29,9 +29,9 @@ help:
 	@echo "  flush-cache      Flush redis (rebuilds scoreboard cache on next request)"
 	@echo ""
 	@echo "Before first 'platform-up':"
-	@echo "  1. cp .gzctf/appsettings.example.json .gzctf/appsettings.json"
-	@echo "  2. edit .gzctf/.env (WORKSPACE + PUBLIC_ENTRY + ACME email)"
-	@echo "  3. edit .gzctf/appsettings.json (admin seed password + secrets)"
+	@echo "  1. cp compose/appsettings.example.json compose/appsettings.json"
+	@echo "  2. edit compose/.env (WORKSPACE + PUBLIC_ENTRY + ACME email)"
+	@echo "  3. edit compose/appsettings.json (admin seed password + secrets)"
 	@echo "  4. make setup && make platform-up"
 
 setup:
@@ -41,42 +41,42 @@ setup:
 	@echo "Done. Run 'make platform-up' to start the platform."
 
 platform-up:
-	(cd .gzctf && ${COMPOSE} up -d)
+	(cd compose && ${COMPOSE} up -d)
 
 platform-down:
-	(cd .gzctf && ${COMPOSE} down)
+	(cd compose && ${COMPOSE} down)
 
 platform-restart: platform-down platform-up
 
 platform-clean:
-	(cd .gzctf && ${COMPOSE} down -v)
+	(cd compose && ${COMPOSE} down -v)
 
 pull:
-	(cd .gzctf && ${COMPOSE} pull)
+	(cd compose && ${COMPOSE} pull)
 
 platform-logs:
-	(cd .gzctf && ${COMPOSE} logs -f)
+	(cd compose && ${COMPOSE} logs -f)
 
 gzctf-logs:
-	(cd .gzctf && ${COMPOSE} logs -f gzctf)
+	(cd compose && ${COMPOSE} logs -f gzctf)
 
 db-logs:
-	(cd .gzctf && ${COMPOSE} logs -f db)
+	(cd compose && ${COMPOSE} logs -f db)
 
 cache-logs:
-	(cd .gzctf && ${COMPOSE} logs -f cache)
+	(cd compose && ${COMPOSE} logs -f cache)
 
 traefik-logs:
-	(cd .gzctf && ${COMPOSE} logs -f traefik)
+	(cd compose && ${COMPOSE} logs -f traefik)
 
 traefik-restart:
-	(cd .gzctf && ${COMPOSE} restart traefik)
+	(cd compose && ${COMPOSE} restart traefik)
 
 flush-cache:
-	(cd .gzctf && ${COMPOSE} exec cache redis-cli FLUSHALL)
+	(cd compose && ${COMPOSE} exec cache redis-cli FLUSHALL)
 
 init-admin:
 	@echo "Promoting 'admin' user to Admin role..."
-	(cd .gzctf && ${COMPOSE} exec db \
+	(cd compose && ${COMPOSE} exec db \
 		psql -U postgres -d gzctf \
 		-c "UPDATE \"AspNetUsers\" SET \"Role\"=3 WHERE \"UserName\"='admin';")

@@ -1,6 +1,6 @@
-# Per-operator config — copy from .gzctf/appsettings.example.json,
+# Per-operator config — copy from compose/appsettings.example.json,
 # fill in real secrets, never commit.
-.gzctf/appsettings.json
+compose/appsettings.json
 
 # OS
 .DS_Store
