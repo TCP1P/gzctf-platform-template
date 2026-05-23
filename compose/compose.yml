@@ -1,5 +1,4 @@
-name: '{{.Workspace}}'
-# Project Root: {{.RootFolder}}
+name: '${WORKSPACE}'
 
 services:
   gzctf:
