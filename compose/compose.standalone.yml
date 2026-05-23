@@ -1,0 +1,22 @@
+# Overlay for running gzctf without traefik (no TLS, no Let's Encrypt).
+# Exposes the platform directly on host port 8080.
+#
+# Use via 'make platform-up-no-traefik' (or merge by hand with
+#   docker compose -f compose.yml -f compose.standalone.yml up -d).
+#
+# Requires the 'traefik' + 'challenges' external networks to exist
+# ('make setup' creates them) because compose.yml's gzctf service
+# attaches to both. The traefik network membership is harmless when
+# no traefik container is using it.
+#
+# Heads-up: appsettings.json → ContainerProvider → PublicEntry was
+# rendered from .env's PUBLIC_ENTRY (an https hostname). For
+# standalone use, edit appsettings.json to e.g. "http://<host>:8080"
+# so emails + scoreboard links point to the right place.
+
+name: '${WORKSPACE}'
+
+services:
+  gzctf:
+    ports:
+      - "8080:8080"

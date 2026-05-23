@@ -3,8 +3,9 @@
 
 SUDO ?=
 COMPOSE = ${SUDO} docker compose -f compose.yml -f compose.traefik.yml
+COMPOSE_BARE = ${SUDO} docker compose -f compose.yml -f compose.standalone.yml
 
-.PHONY: help wizard setup init-config platform-up platform-down platform-restart platform-clean \
+.PHONY: help wizard setup init-config platform-up platform-up-no-traefik platform-down platform-restart platform-clean \
         platform-logs gzctf-logs db-logs cache-logs traefik-logs traefik-restart \
         flush-cache pull
 
@@ -12,9 +13,10 @@ help:
 	@echo "GZCTF platform make targets:"
 	@echo ""
 	@echo "  wizard           Interactive first-time setup (writes .env + appsettings.json)"
-	@echo "  setup            One-time bootstrap: create the external `traefik` docker network"
+	@echo "  setup            One-time bootstrap: create the external `traefik` + `challenges` networks"
 	@echo "  init-config      Generate compose/appsettings.json from the example + .env (auto-runs on platform-up)"
 	@echo "  platform-up      Start gzctf + db + cache + traefik (auto-runs init-config if config missing)"
+	@echo "  platform-up-no-traefik   Start gzctf + db + cache only, expose gzctf on host port 8080"
 	@echo "  platform-down    Stop everything (keeps volumes)"
 	@echo "  platform-restart Restart all services"
 	@echo "  platform-clean   Stop everything AND drop volumes (data loss)"
@@ -51,6 +53,11 @@ init-config:
 
 platform-up: init-config
 	(cd compose && ${COMPOSE} up -d)
+
+# Bring up gzctf + db + cache only — no traefik, no TLS. gzctf is
+# reachable on http://<host>:8080.
+platform-up-no-traefik: init-config
+	(cd compose && ${COMPOSE_BARE} up -d)
 
 platform-down:
 	(cd compose && ${COMPOSE} down)
