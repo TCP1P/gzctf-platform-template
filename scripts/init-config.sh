@@ -28,7 +28,15 @@ fi
 # Load .env so PUBLIC_ENTRY / WORKSPACE are available. The file uses
 # shell-style KEY=VALUE so `. ./.env` works.
 if [ ! -f .env ]; then
-    echo "ERROR: compose/.env missing — copy from the repo or fill in values." >&2
+    if [ -f .env.example ]; then
+        cp .env.example .env
+        chmod 600 .env
+        echo "compose/.env missing — copied compose/.env.example as a starter." >&2
+        echo "  Edit it to set PUBLIC_ENTRY + ACME_EMAIL, then re-run." >&2
+        echo "  (Or run 'make wizard' from the repo root for an interactive setup.)" >&2
+        exit 1
+    fi
+    echo "ERROR: compose/.env missing and no .env.example to copy from." >&2
     exit 1
 fi
 # shellcheck disable=SC1091

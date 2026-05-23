@@ -37,9 +37,11 @@ wizard:
 	@sh scripts/wizard.sh
 
 setup:
-	@echo "Creating the external 'traefik' docker network (idempotent)..."
-	${SUDO} docker network inspect traefik >/dev/null 2>&1 \
+	@echo "Creating external docker networks 'traefik' + 'challenges' (idempotent)..."
+	@${SUDO} docker network inspect traefik >/dev/null 2>&1 \
 		|| ${SUDO} docker network create traefik
+	@${SUDO} docker network inspect challenges >/dev/null 2>&1 \
+		|| ${SUDO} docker network create challenges
 	@echo "Done. Run 'make platform-up' to start the platform."
 
 # Generates compose/appsettings.json from the shipped example on
