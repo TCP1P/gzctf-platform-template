@@ -4,7 +4,7 @@
 SUDO ?=
 COMPOSE = ${SUDO} docker compose -f compose.yml -f compose.traefik.yml
 
-.PHONY: help setup platform-up platform-down platform-restart platform-clean \
+.PHONY: help setup init-config platform-up platform-down platform-restart platform-clean \
         platform-logs gzctf-logs db-logs cache-logs traefik-logs traefik-restart \
         flush-cache init-admin pull
 
@@ -12,7 +12,8 @@ help:
 	@echo "GZCTF platform make targets:"
 	@echo ""
 	@echo "  setup            One-time bootstrap: create the external `traefik` docker network"
-	@echo "  platform-up      Start gzctf + db + cache + traefik"
+	@echo "  init-config      Generate compose/appsettings.json from the example + .env (auto-runs on platform-up)"
+	@echo "  platform-up      Start gzctf + db + cache + traefik (auto-runs init-config if config missing)"
 	@echo "  platform-down    Stop everything (keeps volumes)"
 	@echo "  platform-restart Restart all services"
 	@echo "  platform-clean   Stop everything AND drop volumes (data loss)"
@@ -29,10 +30,9 @@ help:
 	@echo "  flush-cache      Flush redis (rebuilds scoreboard cache on next request)"
 	@echo ""
 	@echo "Before first 'platform-up':"
-	@echo "  1. cp compose/appsettings.example.json compose/appsettings.json"
-	@echo "  2. edit compose/.env (WORKSPACE + PUBLIC_ENTRY + ACME email)"
-	@echo "  3. edit compose/appsettings.json (admin seed password + secrets)"
-	@echo "  4. make setup && make platform-up"
+	@echo "  1. edit compose/.env (PUBLIC_ENTRY at minimum)"
+	@echo "  2. make setup && make platform-up"
+	@echo "  (init-config runs automatically; XorKey is generated; admin password is in the appsettings.json that gets created)"
 
 setup:
 	@echo "Creating the external 'traefik' docker network (idempotent)..."
@@ -40,7 +40,12 @@ setup:
 		|| ${SUDO} docker network create traefik
 	@echo "Done. Run 'make platform-up' to start the platform."
 
-platform-up:
+# Generates compose/appsettings.json from the shipped example on
+# first run. Idempotent — bails silently if the file already exists.
+init-config:
+	@sh scripts/init-config.sh
+
+platform-up: init-config
 	(cd compose && ${COMPOSE} up -d)
 
 platform-down:

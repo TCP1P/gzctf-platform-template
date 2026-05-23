@@ -14,18 +14,25 @@ Adapted from [gzcli's `ctf-template`](https://github.com/dimasma0305/gzcli/tree/
 ## docker-compose
 
 ```sh
-# 1. Seed your operator config (never commit this file)
-cp compose/appsettings.example.json compose/appsettings.json
-$EDITOR compose/.env              # WORKSPACE, PUBLIC_ENTRY, ACME email
-$EDITOR compose/appsettings.json  # admin seed password + DB password + (optional) SMTP
+# 1. Set your public hostname (everything else has sane defaults)
+$EDITOR compose/.env             # PUBLIC_ENTRY=ctf.example.com
 
-# 2. Create the `traefik` docker network + start everything
-make setup        # idempotent: creates the external `traefik` network
-make platform-up  # gzctf + db + cache + traefik
+# 2. Start everything — compose/appsettings.json is auto-generated
+make setup        # one-time: create the external `traefik` docker network
+make platform-up  # auto-runs init-config, then brings the stack up
 
 # 3. After first boot, promote the seeded admin user
 make init-admin   # runs UPDATE … SET Role=3 WHERE UserName='admin'
 ```
+
+What the auto-init does on first `platform-up`:
+- Copies `compose/appsettings.example.json` → `compose/appsettings.json`
+- Substitutes `{{.PublicEntry}}` from your `.env`
+- Generates a strong random `XorKey` (used to encrypt PAT / registry passwords at rest); persisted back to `.env` so re-runs are stable
+
+It only runs if `compose/appsettings.json` doesn't exist yet — re-runs are no-ops. To regenerate, delete the file first.
+
+After it lands, you can still edit `compose/appsettings.json` directly to change admin-seed password, SMTP, captcha provider, etc. The file is `chmod 600` + in `.gitignore`.
 
 Run `make help` for the full target list. The most useful day-to-day:
 
@@ -42,10 +49,14 @@ Final layout under `compose/`:
 
 ```
 compose/
-├── .env                          # WORKSPACE / PUBLIC_ENTRY / ACME email
-├── appsettings.example.json      # template — copy to appsettings.json before first up
+├── .env                          # PUBLIC_ENTRY (+ auto-appended XOR_KEY after first init)
+├── appsettings.example.json      # template — never edited directly
+├── appsettings.json              # auto-generated on first run, in .gitignore
 ├── compose.yml                   # main stack (gzctf, db, cache)
 └── compose.traefik.yml           # traefik service definition + ACME settings
+
+scripts/
+└── init-config.sh                # idempotent renderer; called by `make init-config`
 ```
 
 `appsettings.json` is in `.gitignore` — it carries DB + admin secrets and is per-deployment.
