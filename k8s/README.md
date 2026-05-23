@@ -9,8 +9,9 @@ the host's docker socket.
 ## Quick start
 
 ```sh
-# 1. Edit the public hostname + admin secret BEFORE applying
+# 1. Fill in secrets + hostname (or use the auto-generation snippet below)
 $EDITOR 30-gzctf-config.yaml
+$EDITOR 50-ingress.yaml
 
 # 2. Apply in order
 kubectl apply -f 00-namespace.yaml
@@ -23,6 +24,37 @@ kubectl apply -f 50-ingress.yaml
 # 3. Watch the gzctf pod come up
 kubectl -n gzctf rollout status deploy/gzctf
 ```
+
+### Auto-generating secrets
+
+Easier than editing the YAML by hand — apply the namespace first, then
+overwrite the `gzctf-secrets` Secret with freshly-generated values
+before applying `30-gzctf-config.yaml`:
+
+```sh
+kubectl apply -f 00-namespace.yaml
+
+kubectl -n gzctf create secret generic gzctf-secrets \
+  --from-literal=postgres-password="$(openssl rand -hex 16)" \
+  --from-literal=xor-key="$(openssl rand -hex 32)" \
+  --from-literal=admin-password="$(openssl rand -hex 12)" \
+  --from-literal=smtp-username="" \
+  --from-literal=smtp-password=""
+
+# Then continue with the rest:
+kubectl apply -f 10-postgres.yaml -f 20-redis.yaml \
+              -f 30-gzctf-config.yaml -f 40-gzctf.yaml -f 50-ingress.yaml
+```
+
+Read the admin password back when you need to log in:
+
+```sh
+kubectl -n gzctf get secret gzctf-secrets -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+> **Don't rotate `xor-key` after first boot** — gzctf uses it to
+> encrypt repo-binding PATs + registry passwords at rest. Changing
+> the key after data lands breaks every encrypted value in the DB.
 
 GZCTF will be reachable at the hostname configured in `50-ingress.yaml`
 once cert-manager (or Traefik's built-in ACME) issues a TLS cert.

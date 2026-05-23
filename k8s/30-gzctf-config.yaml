@@ -1,11 +1,12 @@
 # Config, secrets, RBAC for the gzctf platform.
 #
 # BEFORE FIRST APPLY:
-#   - Change PUBLIC_ENTRY to your real hostname
-#   - Change postgres-password + emailconfig-password to strong values
-#     (or generate them with: kubectl create secret generic gzctf-secrets ...)
-#   - If you don't have an SMTP relay, comment out EmailConfig entirely
-#     (admin can still log in with seeded credentials)
+#   - Change postgres-password + xor-key + admin-password to strong values
+#     (or use `kubectl create secret generic gzctf-secrets ...`)
+#   - Update PublicEntry + Host references inside the ConfigMap to match
+#     your ingress hostname (search for "ctf.example.com")
+#   - Decide whether to keep EmailConfig + CaptchaConfig wired up — both
+#     ship as inert placeholders.
 
 apiVersion: v1
 kind: Secret
@@ -14,15 +15,30 @@ metadata:
   namespace: gzctf
 type: Opaque
 stringData:
-  # Strong, random — gets passed to postgres on first boot.
+  # Strong, random — gets passed to postgres on first boot and
+  # interpolated into the Database connection string at runtime.
   postgres-password: "CHANGE_ME_postgres_password"
-  # Admin password applied via init job (see 40-gzctf.yaml).
+
+  # 256-bit hex string used by gzctf to encrypt registry passwords +
+  # repo-binding PATs at rest. Rotating it BREAKS every encrypted
+  # value already in the DB, so pick one once and never change it.
+  # Generate with:  openssl rand -hex 32
+  xor-key: "CHANGE_ME_64_hex_chars_xor_key__________________________________"
+
+  # Seed password for the auto-created `admin` user. After first boot
+  # log in, change it via /admin/profile, then run `make init-admin`.
   admin-password: "CHANGE_ME_admin_password"
-  # Optional: SMTP relay credentials. Remove if not used.
+
+  # Optional: SMTP relay credentials. Leave blank to skip email sending.
   smtp-username: ""
   smtp-password: ""
 
 ---
+# appsettings.json — same shape as compose/appsettings.example.json
+# with the container provider switched to Kubernetes mode + connection
+# strings pointed at the in-namespace postgres + redis Services.
+# Placeholders __POSTGRES_PASSWORD__ and __XOR_KEY__ are substituted
+# by the render-config initContainer in 40-gzctf.yaml.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -33,32 +49,135 @@ data:
     {
       "AllowedHosts": "*",
       "ConnectionStrings": {
-        "Database": "Host=postgres;Database=gzctf;Username=postgres;Password=__POSTGRES_PASSWORD__",
-        "RedisCache": "redis:6379,abortConnect=false"
+        "Database": "Host=postgres:5432;Database=gzctf;Username=postgres;Password=__POSTGRES_PASSWORD__",
+        "RedisCache": "redis:6379"
       },
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "Microsoft": "Warning",
+          "Microsoft.Hosting.Lifetime": "Information"
+        },
+        "Loki": {
+          "Enable": false,
+          "EndpointUri": "http://loki:3100",
+          "Labels": [ { "Key": "app", "Value": "gzctf" } ],
+          "PropertiesAsLabels": [ "app" ],
+          "Credentials": { "Login": "login", "Password": "password" },
+          "Tenant": "my-tenant",
+          "MinimumLevel": "Trace"
+        }
+      },
+      "Telemetry": {
+        "Prometheus": {
+          "Enable": false,
+          "Port": 3000,
+          "TotalNameSuffixForCounters": false
+        },
+        "OpenTelemetry": {
+          "Enable": false,
+          "Protocol": "Grpc",
+          "EndpointUri": "http://jaeger-collector:4317"
+        },
+        "AzureMonitor": {
+          "Enable": false,
+          "ConnectionString": "InstrumentationKey=12345678-abcd-abcd-abcd-12345678..."
+        },
+        "Console": { "Enable": false }
+      },
+      "EmailConfig": {
+        "SenderAddress": "noreply@example.com",
+        "SenderName": "noreply",
+        "UserName": "noreply@example.com",
+        "Password": "-",
+        "Smtp": { "Host": "smtp.example.com", "Port": 587 }
+      },
+      "XorKey": "__XOR_KEY__",
       "ContainerProvider": {
         "Type": "Kubernetes",
-        "PublicEntry": "challenges.example.com",
         "PortMappingType": "PlatformProxy",
         "EnableTrafficCapture": true,
+        "PublicEntry": "ctf.example.com",
+        "DockerConfig": {
+          "SwarmMode": false,
+          "ChallengeNetwork": "challenges",
+          "Uri": "unix:///var/run/docker.sock",
+          "UserName": "",
+          "Password": ""
+        },
         "KubernetesConfig": {
           "Namespace": "gzctf-challenges",
-          "AllowCIDR": [ "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" ],
+          "AllowCIDR": [ "10.0.0.0/8" ],
           "DNS": [ "8.8.8.8", "1.1.1.1" ]
         }
       },
-      "RequestLogging": false,
-      "DisableRateLimit": false,
+      "RequestLogging": true,
+      "DisableRateLimit": true,
       "RegistryConfig": {
         "UserName": "",
         "Password": "",
         "ServerAddress": ""
       },
-      "CaptchaConfig": { "Provider": "None" },
+      "CaptchaConfig": {
+        "Provider": "None",
+        "SiteKey": "",
+        "SecretKey": ""
+      },
       "ForwardedOptions": {
         "ForwardedHeaders": 5,
         "ForwardLimit": 1,
-        "TrustedNetworks": [ "0.0.0.0/0", "::/0" ]
+        "ForwardedForHeaderName": "X-Forwarded-For",
+        "TrustedNetworks": [ "0.0.0.0/0", "::/0" ],
+        "TrustedProxies": []
+      },
+      "Kestrel": {
+        "Endpoints": {},
+        "Limits": {
+          "MaxResponseBufferSize": 2048,
+          "MaxRequestBufferSize": 1048576,
+          "MaxRequestLineSize": 8192,
+          "MaxRequestHeadersTotalSize": 32768,
+          "MaxRequestHeaderCount": 100,
+          "MaxRequestBodySize": 300000000,
+          "KeepAliveTimeout": "0.0:5:0",
+          "RequestHeadersTimeout": "0.0:5:0",
+          "MaxConcurrentConnections": null,
+          "MaxConcurrentUpgradedConnections": null
+        },
+        "AddServerHeader": true,
+        "AllowResponseHeaderCompression": true,
+        "AllowSynchronousIO": false,
+        "AllowAlternateSchemes": false,
+        "DisableStringReuse": false,
+        "ConfigurationLoader": null
+      },
+      "HoneypotConfig": {
+        "Enabled": true,
+        "ListenAddress": "0.0.0.0",
+        "Ports": [
+          { "Name": "ssh",       "Port": 2222,  "Banner": "SSH-2.0-OpenSSH_8.4p1 backup-server", "Enabled": true },
+          { "Name": "mysql",     "Port": 3306,  "Banner": "", "Enabled": true },
+          { "Name": "postgres",  "Port": 5432,  "Banner": "", "Enabled": true },
+          { "Name": "redis",     "Port": 6379,  "Banner": "", "Enabled": true },
+          { "Name": "memcached", "Port": 11211, "Banner": "", "Enabled": true },
+          { "Name": "mongo",     "Port": 27017, "Banner": "", "Enabled": true },
+          { "Name": "elastic",   "Port": 9200,  "Banner": "", "Enabled": true }
+        ],
+        "ChainEnabled": true,
+        "ChainThreshold": 3,
+        "ChainWindowMinutes": 30,
+        "ChainSweepIntervalSeconds": 60
+      },
+      "FlagEgressConfig": {
+        "Enabled": true,
+        "WindowSeconds": 60,
+        "MinPacketDataLength": 8,
+        "FlushIntervalSeconds": 5
+      },
+      "CheatDetectionConfig": {
+        "LogContainerAccess": true,
+        "DelayedSubmissionThresholdMinutes": 60,
+        "InstantSubmitThresholdSeconds": 3
       }
     }
 

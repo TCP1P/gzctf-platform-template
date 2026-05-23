@@ -29,23 +29,32 @@ spec:
     spec:
       serviceAccountName: gzctf
       initContainers:
-        # Inline the postgres password from the secret into the
-        # config's ConnectionStrings.Database value. Without this step
-        # the gzctf container would see __POSTGRES_PASSWORD__ literally.
+        # Inline secrets (postgres-password, xor-key) into the
+        # appsettings.json placeholders. The gzctf container would
+        # otherwise see __POSTGRES_PASSWORD__ / __XOR_KEY__ literally
+        # and fail to connect / encrypt.
         - name: render-config
           image: alpine:3.20
           command:
             - sh
             - -c
-            - >-
-              sed "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g"
-              /tmpl/appsettings.json > /rendered/appsettings.json
+            - |
+              sed \
+                -e "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g" \
+                -e "s|__XOR_KEY__|$XOR_KEY|g" \
+                /tmpl/appsettings.json > /rendered/appsettings.json
+              chmod 600 /rendered/appsettings.json
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: gzctf-secrets
                   key: postgres-password
+            - name: XOR_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gzctf-secrets
+                  key: xor-key
           volumeMounts:
             - { name: appsettings-tmpl, mountPath: /tmpl }
             - { name: appsettings-rendered, mountPath: /rendered }
