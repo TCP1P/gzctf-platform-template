@@ -1,19 +1,8 @@
-# GZCLI Tool Data
-.gzcli/cache/
-.gzcli/watcher/
-.gzcli/current-event
-
-# GZCTF Server Data
+# Per-operator config — copy from .gzctf/appsettings.example.json,
+# fill in real secrets, never commit.
 .gzctf/appsettings.json
-.gzctf/conf.yaml
 
-# Event State (runtime data)
-**/.gzevent.state
-
-# Docker
-.gzctf/docker-compose.yml
-
-# OS Files
+# OS
 .DS_Store
 Thumbs.db
 
@@ -23,8 +12,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Logs
+# Logs / temp
 *.log
-
-# Temporary files
 *.tmp

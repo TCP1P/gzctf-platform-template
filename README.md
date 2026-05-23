@@ -14,44 +14,41 @@ Adapted from [gzcli's `ctf-template`](https://github.com/dimasma0305/gzcli/tree/
 ## docker-compose
 
 ```sh
-# 1. Edit the env + appsettings before first up
-$EDITOR .gzctf/.env             # WORKSPACE, PUBLIC_ENTRY, ACME email
-$EDITOR .gzctf/appsettings.json # admin password seed, optional SMTP
+# 1. Seed your operator config (never commit this file)
+cp .gzctf/appsettings.example.json .gzctf/appsettings.json
+$EDITOR .gzctf/.env              # WORKSPACE, PUBLIC_ENTRY, ACME email
+$EDITOR .gzctf/appsettings.json  # admin seed password + DB password + (optional) SMTP
 
-# 2. Create the shared `challenges` docker network (gzcli also uses it)
-docker network create challenges
-docker network create traefik
+# 2. Create the `traefik` docker network + start everything
+make setup        # idempotent: creates the external `traefik` network
+make platform-up  # gzctf + db + cache + traefik
 
-# 3. Bring everything up
-make setup           # one-time: build the manager container
-make platform-up     # gzctf + db + cache + traefik
+# 3. After first boot, promote the seeded admin user
+make init-admin   # runs UPDATE … SET Role=3 WHERE UserName='admin'
 ```
 
-The `Makefile` exposes:
+Run `make help` for the full target list. The most useful day-to-day:
 
-| Target | Purpose |
+| Target | What |
 |---|---|
-| `make platform-up` / `platform-down` | start/stop gzctf + db + cache + traefik |
-| `make gzcli-start` / `gzcli-stop` | optional gzcli watcher sidecar (auto-sync from a git repo) |
-| `make sync` | one-shot import of every `challenge.yml` under the current working tree |
-| `make watch` / `watch-stop` / `watch-status` | follow-mode of `sync` for active dev |
+| `make platform-up` / `down` / `restart` | start, stop, or restart the whole stack |
+| `make pull` | pull the latest image for every service |
+| `make platform-clean` | stop + drop volumes (data loss) |
+| `make {gzctf,db,cache,traefik}-logs` | tail one service |
+| `make flush-cache` | wipe redis (scoreboard rebuilds on next request) |
+| `make init-admin` | promote the seeded admin to Admin role |
 
-The full layout under `.gzctf/`:
+Final layout under `.gzctf/`:
 
 ```
 .gzctf/
-├── compose.yml             # primary stack (gzctf, postgres, redis, traefik, challenges net)
-├── compose.gzcli.yml       # overlay: gzcli sync container
-├── compose.traefik.yml     # overlay: traefik + ACME settings
-├── compose.upload.yml      # overlay: image upload tweaks
-├── .env                    # WORKSPACE / PUBLIC_ENTRY / ACME email
-├── appsettings.json        # gzctf platform config
-├── conf.yaml               # gzcli config (linked from same hostname / token)
-├── init_admin.sh           # bootstraps the first admin user
-├── expose_docker.sh        # helper for exposing docker.sock to gzctf securely
-├── manager/                # sidecar container that runs gzcli + cron jobs
-└── *.schema.yaml           # YAML-LSP schemas for challenge.yml + .gzevent
+├── .env                          # WORKSPACE / PUBLIC_ENTRY / ACME email
+├── appsettings.example.json      # template — copy to appsettings.json before first up
+├── compose.yml                   # main stack (gzctf, db, cache)
+└── compose.traefik.yml           # traefik service definition + ACME settings
 ```
+
+`appsettings.json` is in `.gitignore` — it carries DB + admin secrets and is per-deployment.
 
 ## Kubernetes / k3s
 
