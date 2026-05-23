@@ -5,13 +5,17 @@ Scaffolding to run a [GZCTF](https://github.com/GZTimeWalker/GZCTF) instance.
 ## Docker compose
 
 ```sh
-$EDITOR compose/.env       # set PUBLIC_ENTRY
-make setup                 # creates the external `traefik` docker network
-make platform-up           # auto-generates appsettings.json + starts everything
-make init-admin            # promotes the seeded `admin` user to Admin role
+make wizard         # interactive prompts → writes .env + appsettings.json
+make setup          # creates the external `traefik` docker network
+make platform-up    # starts gzctf + db + cache + traefik
 ```
 
-`make help` lists every target.
+The wizard prints the auto-generated admin password at the end — copy
+it before closing the terminal. Then log in at `https://PUBLIC_ENTRY`
+as user `Admin`.
+
+`make help` lists every target. SMTP / captcha / private-registry
+credentials can also be configured later under `/admin/settings`.
 
 ## Kubernetes / k3s
 
