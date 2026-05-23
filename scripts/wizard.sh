@@ -165,7 +165,11 @@ fi
 # ---------------------------------------------------------------------------
 WORKSPACE="gzctf-$(openssl rand -hex 4)"
 XOR_KEY=$(openssl rand -hex 32)
-ADMIN_PASSWORD=$(openssl rand -hex 12)
+# Prefix 'Aa1' to satisfy ASP.NET Identity's default password policy
+# (requires uppercase + lowercase + digit). Raw hex is all-lowercase
+# and would silently fail UserManager.CreateAsync, leaving no Admin
+# user at all.
+ADMIN_PASSWORD="Aa1$(openssl rand -hex 12)"
 
 # ---------------------------------------------------------------------------
 # Write .env

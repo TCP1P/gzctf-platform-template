@@ -107,10 +107,14 @@ fi
 # already have it; this branch handles the edit-.env-by-hand path.
 ADMIN_PASSWORD_GENERATED=
 if [ -z "${ADMIN_PASSWORD:-}" ]; then
+    # Prefix 'Aa1' to satisfy ASP.NET Identity's default password
+    # policy (uppercase + lowercase + digit required). Without it,
+    # the PrelaunchHelper's CreateAsync would silently fail and no
+    # Admin user would exist.
     if command -v openssl >/dev/null 2>&1; then
-        ADMIN_PASSWORD="$(openssl rand -hex 12)"
+        ADMIN_PASSWORD="Aa1$(openssl rand -hex 12)"
     elif [ -r /dev/urandom ]; then
-        ADMIN_PASSWORD="$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+        ADMIN_PASSWORD="Aa1$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')"
     else
         echo "ERROR: openssl missing and /dev/urandom unreadable — can't generate ADMIN_PASSWORD." >&2
         exit 1
