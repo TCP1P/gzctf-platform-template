@@ -44,6 +44,34 @@ case "$PUBLIC_ENTRY" in
         ;;
 esac
 
+# WORKSPACE is just a docker-compose project name + traefik route
+# suffix — auto-pick something slug-safe if the operator left the
+# placeholder. Rotating it later means losing the existing
+# docker-compose project's volume bindings, so we persist the chosen
+# value back to .env (same caveat as XorKey).
+WORKSPACE="${WORKSPACE:-}"
+case "$WORKSPACE" in
+    ""|*"{{"*"}}"*|"<"*">"*)
+        if command -v openssl >/dev/null 2>&1; then
+            WS_SUFFIX="$(openssl rand -hex 4)"
+        elif [ -r /dev/urandom ]; then
+            WS_SUFFIX="$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+        else
+            WS_SUFFIX="default"
+        fi
+        WORKSPACE="gzctf-$WS_SUFFIX"
+        # Overwrite the placeholder line if present, otherwise append.
+        if grep -qE '^WORKSPACE=' .env; then
+            # Portable in-place: write to temp + replace
+            sed 's|^WORKSPACE=.*|WORKSPACE="'"$WORKSPACE"'"|' .env > .env.tmp \
+                && mv .env.tmp .env
+        else
+            printf '\nWORKSPACE="%s"\n' "$WORKSPACE" >> .env
+        fi
+        echo "Auto-picked WORKSPACE=$WORKSPACE (persisted to .env)"
+        ;;
+esac
+
 # Generate a strong XorKey (used to obfuscate registry passwords + repo
 # binding tokens at rest). 64 hex chars = 256 bits of entropy.
 if [ -n "${XOR_KEY:-}" ]; then
@@ -81,6 +109,9 @@ sed \
 
 chmod 600 appsettings.json
 
-echo "Generated compose/appsettings.json (PUBLIC_ENTRY=$PUBLIC_ENTRY, XorKey=auto)"
-echo "  Edit it now to set the admin password, SMTP creds, captcha, etc."
-echo "  File is chmod 600 + in .gitignore — never commit it."
+echo "Generated compose/appsettings.json"
+echo "  PUBLIC_ENTRY = $PUBLIC_ENTRY"
+echo "  WORKSPACE    = $WORKSPACE"
+echo "  XorKey       = (auto-generated, 256 bits)"
+echo "  Edit the file to set admin password, SMTP creds, captcha, etc."
+echo "  It's chmod 600 + in .gitignore — never commit it."
