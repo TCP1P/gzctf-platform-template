@@ -7,7 +7,7 @@ COMPOSE_BARE = ${SUDO} docker compose -f compose.yml -f compose.standalone.yml
 
 .PHONY: help wizard setup init-config platform-up platform-up-no-traefik platform-down platform-restart platform-clean \
         platform-logs gzctf-logs db-logs cache-logs traefik-logs traefik-restart \
-        flush-cache pull
+        flush-cache pull pull-no-traefik pull-gzctf update update-no-traefik update-gzctf
 
 help:
 	@echo "GZCTF platform make targets:"
@@ -30,6 +30,14 @@ help:
 	@echo "  traefik-restart  Restart traefik only"
 	@echo ""
 	@echo "  flush-cache      Flush redis (rebuilds scoreboard cache on next request)"
+	@echo ""
+	@echo "Updating images:"
+	@echo "  pull-gzctf       Pull latest dimasmaualana/gzctf:develop (no restart)"
+	@echo "  pull             Pull latest of every image incl. traefik (no restart)"
+	@echo "  pull-no-traefik  Pull latest of gzctf + postgres + redis (no restart)"
+	@echo "  update-gzctf     Pull gzctf + recreate just the gzctf container"
+	@echo "  update           Pull all + recreate any container with a changed image (traefik mode)"
+	@echo "  update-no-traefik  Same as 'update' but for the standalone (no-traefik) mode"
 	@echo ""
 	@echo "First-time setup:"
 	@echo "  make wizard && make setup && make platform-up"
@@ -69,6 +77,27 @@ platform-clean:
 
 pull:
 	(cd compose && ${COMPOSE} pull)
+
+pull-no-traefik:
+	(cd compose && ${COMPOSE_BARE} pull)
+
+pull-gzctf:
+	(cd compose && ${COMPOSE} pull gzctf)
+
+# 'up -d' recreates any container whose image digest changed and
+# leaves the rest alone. Safe to run while the platform is live —
+# only gzctf goes down briefly if its image was updated.
+update: pull
+	(cd compose && ${COMPOSE} up -d)
+
+update-no-traefik: pull-no-traefik
+	(cd compose && ${COMPOSE_BARE} up -d)
+
+# Targeted refresh: only touch the gzctf container; leave traefik
+# and the DB/cache running. Works in either traefik or standalone
+# mode since both files describe the same gzctf service.
+update-gzctf: pull-gzctf
+	(cd compose && ${COMPOSE} up -d --no-deps gzctf)
 
 platform-logs:
 	(cd compose && ${COMPOSE} logs -f)
