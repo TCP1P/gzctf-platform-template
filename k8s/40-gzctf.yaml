@@ -1,4 +1,4 @@
-# gzctf platform — pulls image gztime/gzctf:latest.
+# gzctf platform — pulls image dimasmaualana/gzctf:develop.
 # Uses an init container to substitute the postgres password into
 # appsettings.json (mounted from the ConfigMap, can't templatize at
 # rest without a third-party tool). The result lands on an emptyDir
@@ -60,7 +60,7 @@ spec:
             - { name: appsettings-rendered, mountPath: /rendered }
       containers:
         - name: gzctf
-          image: gztime/gzctf:latest
+          image: dimasmaualana/gzctf:develop
           ports:
             - containerPort: 8080
           env:

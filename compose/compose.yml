@@ -3,7 +3,7 @@ name: '{{.Workspace}}'
 
 services:
   gzctf:
-    image: gztime/gzctf:latest
+    image: dimasmaualana/gzctf:develop
     restart: always
     environment:
       - "LC_ALL=en_US.UTF-8"
