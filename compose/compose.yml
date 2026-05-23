@@ -103,9 +103,10 @@ networks:
     external: true
   app_net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
+    # No explicit subnet — let docker pick a free one. Pinning
+    # 172.28.0.0/16 used to cause 'pool overlaps' errors on hosts
+    # where that subnet was already allocated by a previous run or
+    # an unrelated docker network.
   # The shared challenges network is created externally (by gzcli or manually
   # via `docker network create challenges`) so gzctf can connect to challenge
   # container IPs when PortMappingType=PlatformProxy.
