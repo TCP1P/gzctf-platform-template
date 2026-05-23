@@ -18,5 +18,3 @@ name: '${WORKSPACE}'
 
 services:
   gzctf:
-    ports:
-      - "8080:8080"
