@@ -33,6 +33,10 @@ services:
       - "gzctf-files:/app/files"
       - "./appsettings.json:/app/appsettings.json:ro"
       - "/var/run/docker.sock:/var/run/docker.sock"
+      # Shared with the wireguard sidecar. gzctf's AdWireGuardSyncService
+      # writes wg0.conf here; the sidecar's inotify loop reads it. Omit the
+      # mount + the sidecar service entirely if you don't need A&D / VPN.
+      - "wg-config:/wg-config"
     depends_on:
       db:
         condition: service_healthy
@@ -71,7 +75,13 @@ services:
     image: postgres:17
     restart: always
     environment:
-      - "POSTGRES_PASSWORD=postgres"
+      # Sourced from .env (wizard.sh / init-config.sh generate a strong
+      # random password and persist it there). Falls back to "postgres"
+      # for legacy deploys whose .env predates the POSTGRES_PASSWORD
+      # field — those should rotate via ALTER USER inside the running
+      # db container, then update .env + appsettings.json's
+      # ConnectionStrings.Database.
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}"
     volumes:
       - "postgres-data:/var/lib/postgresql/data"
     networks:
@@ -93,15 +103,59 @@ services:
       timeout: 5s
       retries: 5
 
+  # Per-team WireGuard VPN endpoint for A&D challenges. AdWireGuardSyncService
+  # (inside gzctf) renders wg0.conf into the shared volume; this sidecar's
+  # inotify loop applies it with `wg syncconf`. AdVpnTopology (also in gzctf)
+  # uses the docker socket to attach this container to challenge networks at
+  # runtime, so VPN clients get a kernel route to challenge container IPs
+  # WITHOUT bridging to the gzctf control plane (postgres + redis stay on
+  # app_net; the sidecar sits on a lonely wg-bootstrap bridge instead).
+  #
+  # Remove this whole service + the gzctf wg-config volume mount + the
+  # wg-bootstrap network + the wg-config volume below if you don't need A&D.
+  wireguard:
+    build:
+      context: ../wireguard
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: 1
+      net.ipv4.ip_forward: 1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      # UDP 51820 is the WireGuard handshake port. Open in your cloud
+      # firewall + DNS-resolve PUBLIC_ENTRY → this host. Players' .conf
+      # files use Endpoint = ${PUBLIC_ENTRY}:51820 by default.
+      - "51820:51820/udp"
+    volumes:
+      - "wg-config:/config"
+    networks:
+      - wg-bootstrap
+    depends_on:
+      - gzctf
+
 volumes:
   gzctf-files:
   postgres-data:
+  # Shared between gzctf (writes wg0.conf + reads server pubkey) and the
+  # wireguard sidecar (writes server keypair on first boot + reloads wg0
+  # on file change).
+  wg-config:
 
 
 networks:
   traefik:
     external: true
   app_net:
+    driver: bridge
+  # Lonely bootstrap bridge for the wireguard sidecar — nothing else lands
+  # on it. Compose just needs *some* network for the sidecar to attach
+  # so the UDP 51820 port mapping works; AdVpnTopology (gzctf) attaches
+  # the sidecar to the platform's challenge networks at runtime.
+  wg-bootstrap:
     driver: bridge
     # No explicit subnet — let docker pick a free one. Pinning
     # 172.28.0.0/16 used to cause 'pool overlaps' errors on hosts

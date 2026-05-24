@@ -170,6 +170,11 @@ XOR_KEY=$(openssl rand -hex 32)
 # and would silently fail UserManager.CreateAsync, leaving no Admin
 # user at all.
 ADMIN_PASSWORD="Aa1$(openssl rand -hex 12)"
+# Postgres credential — kept in step between docker-compose's
+# POSTGRES_PASSWORD env (consumed on first db init) and gzctf's
+# ConnectionStrings.Database. DO NOT rotate later without ALTERing
+# the postgres user inside the running db container.
+POSTGRES_PASSWORD="Aa1$(openssl rand -hex 16)"
 
 # ---------------------------------------------------------------------------
 # Write .env
@@ -189,6 +194,11 @@ XOR_KEY=$XOR_KEY
 # very first boot (when no Admin user exists); ignored afterwards.
 # Change the password in the UI after first login.
 ADMIN_PASSWORD=$ADMIN_PASSWORD
+
+# Postgres credential. Consumed by the db container on first init AND
+# by gzctf's ConnectionStrings (substituted into appsettings.json).
+# Rotating this requires ALTER USER inside the running db.
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 EOF
 chmod 600 "$ENV_FILE"
 
@@ -200,10 +210,12 @@ escape_sed() {
 }
 PUBLIC_ENTRY_ESC=$(escape_sed "$PUBLIC_ENTRY")
 XOR_KEY_ESC=$(escape_sed "$XOR_KEY")
+POSTGRES_PASSWORD_ESC=$(escape_sed "$POSTGRES_PASSWORD")
 
 sed \
     -e "s|{{\\.PublicEntry}}|$PUBLIC_ENTRY_ESC|g" \
     -e "s|{{\\.XorKey}}|$XOR_KEY_ESC|g" \
+    -e "s|{{\\.PostgresPassword}}|$POSTGRES_PASSWORD_ESC|g" \
     "$APP_EXAMPLE" > "$APP_FILE"
 
 # Optional substitutions — only patch if operator opted in. The
