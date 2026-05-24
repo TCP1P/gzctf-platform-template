@@ -1,0 +1,3 @@
+# Optional. Files here are offered to players for download (the binary,
+# the source, a libc, etc.) via `provide: ./dist` in challenge.yml.
+# Remove the `provide:` line if your challenge ships no attachment.

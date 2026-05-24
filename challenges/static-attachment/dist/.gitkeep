@@ -1,0 +1,6 @@
+# Put the files players download here (the binary, the ciphertext, the
+# pcap, etc.). Everything in this directory is packaged and offered for
+# download via the `provide: ./dist` line in challenge.yml.
+#
+# Do NOT put the flag here in plaintext unless the challenge intends for
+# players to find it in the attachment.

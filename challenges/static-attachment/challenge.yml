@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "static-attachment"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example files-only challenge. Players download everything under ./dist;
+  the flag is matched server-side against the flags: list below. Use this
+  type for crypto / reverse / forensics / misc — anything that doesn't
+  need a live server.
+
+type: "StaticAttachment" # don't touch this value
+value: 1000 # don't touch this value (points are admin-controlled)
+
+# One or more accepted flags. Every team submits the SAME flag (static).
+flags:
+  - "flag{replace-me}"
+
+# Directory handed to players for download. Put your attachment files in
+# ./dist; the platform packages them.
+provide: "./dist"

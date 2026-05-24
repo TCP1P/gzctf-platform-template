@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "dynamic-container"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example dynamic container — one instance per team, each with a UNIQUE
+  flag injected via the GZCTF_FLAG env var (from flagTemplate below).
+  Find the bug, pop the service, read the flag. Per-team flags mean a
+  leaked flag identifies who leaked it, so flag-sharing is detectable.
+
+type: "DynamicContainer" # don't touch this value
+value: 1000 # don't touch this value (points are admin-controlled)
+
+container:
+  # containerImage omitted -> platform auto-builds ./src/Dockerfile.
+  # flagTemplate: [TEAM_HASH] is substituted per team to make each flag unique.
+  flagTemplate: "flag{ctf_[TEAM_HASH]_dynamic}"
+  exposePort: 8011
+  memoryLimit: 256
+  cpuCount: 1
+  storageLimit: 256
+
+# Optional: hand players the source/binary. Drop files in ./dist.
+provide: "./dist"
