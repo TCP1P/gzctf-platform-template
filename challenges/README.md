@@ -11,6 +11,56 @@ edit it, then either:
 The `value:` and any `visible:`/`enabled:` fields in `challenge.yml` are
 ignored on import — points + visibility are admin-controlled after review.
 
+Three types are scaffolded here, matching the one-click templates on the
+submit page:
+
+| Folder | `type:` | Use for |
+|---|---|---|
+| [`static-attachment/`](static-attachment/) | `StaticAttachment` | files-only (crypto, reverse, forensics, misc) — no server |
+| [`dynamic-container/`](dynamic-container/) | `DynamicContainer` | one container per team, unique flag via `GZCTF_FLAG` (pwn, web) |
+| [`attack-defense/`](attack-defense/) | `AttackDefense` | persistent service + checker, flag rotates each tick |
+
+Every folder follows the same layout: `challenge.yml` + `src/` (the
+challenge, auto-built from `./src/Dockerfile` when it's a container) +
+`solver/` (a working solver so reviewers can verify it). Put player
+downloads in `dist/`.
+
+## static-attachment/
+
+```
+static-attachment/
+├── challenge.yml     # type: StaticAttachment + flags: + provide: ./dist
+├── src/
+│   └── flag.txt      # reference copy of the flag (NOT shipped to players)
+├── dist/             # files players download (the binary, ciphertext, pcap…)
+└── solver/
+    └── solve.py      # how to recover the flag from ./dist
+```
+
+No container, no build. Players download whatever is in `dist/`; the flag
+is matched server-side from the `flags:` list. Same static flag for every
+team.
+
+## dynamic-container/
+
+```
+dynamic-container/
+├── challenge.yml     # type: DynamicContainer + container.flagTemplate/exposePort
+├── src/
+│   ├── Dockerfile    # platform auto-builds this
+│   └── challenge.py  # pure-Python TCP service (socketserver), reads GZCTF_FLAG
+├── dist/             # optional: hand players the source/binary
+└── solver/
+    └── solve.py      # connects + exploits + reads the flag
+```
+
+One container per team. The platform substitutes `[TEAM_HASH]` in
+`flagTemplate` to give each team a unique flag and injects it as the
+`GZCTF_FLAG` env var at container start — so a leaked flag identifies the
+team it came from. The flag is fixed for the life of the container (it
+does not rotate; that's A&D). Example service is stdlib `socketserver` —
+no socat / shell wrapper.
+
 ## attack-defense/
 
 A full Attack & Defense challenge:

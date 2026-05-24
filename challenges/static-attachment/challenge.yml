@@ -11,15 +11,7 @@ description: |
   need a live server.
 
 type: "StaticAttachment" # don't touch this value
-
-# `value` / `minScoreRate` / `difficulty` omitted — fine to add per challenge
-# if you want explicit first-blood-decay tuning (defaults: originalScore=1000,
-# minScoreRate=0.25, difficulty=5). For most jeopardy-style challenges the
-# defaults work; uncomment + tune only if you want a different starting score
-# or a steeper / flatter decay curve.
-
-# ignore: true   # uncomment to stop syncing this challenge (won't be
-                 # (re)imported; delete an existing copy in the admin UI once)
+value: 1000 # don't touch this value (points are admin-controlled)
 
 # One or more accepted flags. Every team submits the SAME flag (static).
 flags:
