@@ -21,16 +21,18 @@ container:
   cpuCount: 1
   storageLimit: 256
 
-# A&D-specific knobs. All optional — omit to take platform defaults.
+# A&D per-challenge knobs — this service's own properties. All optional.
+# Event-wide policy (tick length, flag lifetime, reset cooldown, snapshot
+# download) is set ONCE on the game in admin settings, not per challenge —
+# rounds span the whole game, so every service shares one tick.
 ad:
   # Checker image speaking the enochecker3 exit-code contract
   # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and
   # push it to your registry, then put the ref here. Leave empty to fall
   # back to a plain TCP-reachability probe (no flag-correctness check).
   checkerImage: ""
-  tickSeconds: 120
-  flagLifetimeTicks: 5
+  # Can this service reach the public internet? Default false (sandboxed).
   allowEgress: false
+  # Can teams self-reset THIS service's container? Default true. (The reset
+  # cooldown itself is the game-wide knob.)
   allowSelfReset: true
-  resetCooldownMinutes: 5
-  allowSnapshotDownload: true

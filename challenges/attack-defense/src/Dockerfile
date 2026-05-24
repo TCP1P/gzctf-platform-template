@@ -1,16 +1,12 @@
-FROM alpine:3.21
-
-RUN apk add --no-cache socat
+FROM python:3.12-alpine
 
 # Warmup flag — the platform overwrites /flag every tick via docker exec,
-# and also injects the first round's flag through the GZCTF_FLAG env var.
+# and injects the first round's flag through the GZCTF_FLAG env var.
 RUN echo 'flag{warmup-no-round-yet}' > /flag && chmod 644 /flag
 
-COPY serve.sh /serve.sh
-RUN chmod +x /serve.sh
+COPY service.py /service.py
 
 EXPOSE 80
 
-# socat forks per connection; serve.sh reads /flag fresh each request so
-# the per-tick rotation is visible immediately (no caching).
-CMD ["socat", "-T", "5", "TCP-LISTEN:80,reuseaddr,fork", "SYSTEM:/serve.sh"]
+# Pure stdlib (http.server) — no pip install needed for the service.
+CMD ["python3", "/service.py"]
