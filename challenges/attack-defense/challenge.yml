@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "attack-defense"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example Attack & Defense service. The platform plants a fresh flag into
+  /flag every tick; your service must expose it only to whoever holds the
+  intended capability, and defenders patch the bug without breaking the
+  checker.
+
+type: "AttackDefense" # don't touch this value
+value: 1000 # don't touch this value (points are admin-controlled)
+
+# A&D reuses the container block for the per-team SERVICE image + port.
+# containerImage omitted -> platform auto-builds ./src/Dockerfile.
+container:
+  exposePort: 80
+  memoryLimit: 256
+  cpuCount: 1
+  storageLimit: 256
+
+# A&D-specific knobs. All optional — omit to take platform defaults.
+ad:
+  # Checker image speaking the enochecker3 exit-code contract
+  # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and
+  # push it to your registry, then put the ref here. Leave empty to fall
+  # back to a plain TCP-reachability probe (no flag-correctness check).
+  checkerImage: ""
+  tickSeconds: 120
+  flagLifetimeTicks: 5
+  allowEgress: false
+  allowSelfReset: true
+  resetCooldownMinutes: 5
+  allowSnapshotDownload: true
