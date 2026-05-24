@@ -17,16 +17,26 @@ A full Attack & Defense challenge:
 
 ```
 attack-defense/
-├── challenge.yml     # type: AttackDefense + container (service) + ad (checker/tick) blocks
+├── challenge.yml     # type: AttackDefense + container (service) + ad (checker) blocks
 ├── src/              # the per-team SERVICE (platform auto-builds ./src/Dockerfile)
 │   ├── Dockerfile    # serves /flag over HTTP; platform rotates /flag each tick
-│   └── serve.sh
+│   └── service.py    # the toy vulnerable service (Python http.server)
 ├── checker/          # SLA/correctness checker — build + push, then set ad.checkerImage
 │   ├── Dockerfile
-│   └── check.sh      # enochecker3 exit codes: 0 Ok / 1 Mumble / 2 Offline / 3 InternalError
+│   ├── checker.py    # harness (don't edit) — registry + enochecker3 exit codes
+│   ├── checks.py     # ADD YOUR TEST CASES HERE: a @check function each
+│   ├── run.py        # entrypoint (imports checks, runs the harness)
+│   └── requirements.txt
 └── solver/
     └── solve.py      # your attack exploit (run against other teams each tick)
 ```
+
+**Adding a checker test case** — edit `checker/checks.py`: write a
+function that takes a `Target` and decorate it with `@check`. Return
+normally to pass, `raise Mumble("why")` if the service is up but wrong;
+`t.get(path)` / `t.post(path)` raise `Offline` for you if it's
+unreachable. The harness runs every registered check each tick and
+reports the worst verdict. No need to touch `checker.py` or `run.py`.
 
 **Flag flow** — you do NOT author flags for A&D. The platform plants a
 fresh per-team flag into `/flag` inside every team's container at the
@@ -44,3 +54,9 @@ no flag-correctness (`Mumble`) distinction.
 **Egress** — `ad.allowEgress: false` (default) sandboxes team containers
 off the public internet. Flip to `true` only for services that genuinely
 need an outbound call.
+
+**Event-wide settings** — tick length, flag lifetime, reset cooldown, and
+snapshot-download are **game** settings (admin → game → Info), not
+per-challenge. A round spans the whole game, so every A&D service shares
+one tick. The challenge `ad:` block only carries the service's own
+properties (`checkerImage`, `allowEgress`, `allowSelfReset`).
