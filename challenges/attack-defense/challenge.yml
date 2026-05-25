@@ -31,11 +31,12 @@ container:
 ad:
   # Checker image speaking the enochecker3 exit-code contract
   # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and
-  # push it to your registry, then put the ref here. Leave empty to fall
-  # back to a plain TCP-reachability probe (no flag-correctness check).
-  checkerImage: ""
-  # Can this service reach the public internet? Default false (sandboxed).
-  allowEgress: false
+  # push it to your registry, then uncomment the ref below. Omit entirely to
+  # fall back to a plain TCP-reachability probe (no flag-correctness check).
+  # checkerImage: "ghcr.io/your-org/attack-defense-checker:latest"
+  # Can this service reach the public internet? Default true (open). Set
+  # false to sandbox a service that should have no egress.
+  allowEgress: true
   # Can teams self-reset THIS service's container? Default true. (The reset
   # cooldown itself is the game-wide knob.)
   allowSelfReset: true
