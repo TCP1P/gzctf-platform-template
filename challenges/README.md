@@ -11,6 +11,23 @@ edit it, then either:
 The `value:` and any `visible:`/`enabled:` fields in `challenge.yml` are
 ignored on import — points + visibility are admin-controlled after review.
 
+### Stopping a challenge from syncing — `ignore: true`
+
+Deleting a challenge in the admin UI removes it from the platform but **not**
+from this repo, so a repo watch will re-import (resurrect) it on the next
+sync. To keep it gone, add `ignore: true` to its `challenge.yml`:
+
+```yaml
+name: "old-challenge"
+type: "StaticAttachment"
+ignore: true   # importer skips this challenge entirely — never created/updated
+```
+
+`ignore: true` makes the importer skip the challenge (no create, no update),
+so deleting it once in the UI sticks. It does **not** delete an
+already-imported copy — remove that in the UI (or it just stops receiving
+updates). Drop the key to start syncing again.
+
 Three types are scaffolded here, matching the one-click templates on the
 submit page:
 
