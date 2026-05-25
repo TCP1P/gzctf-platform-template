@@ -13,6 +13,9 @@ description: |
 type: "AttackDefense" # don't touch this value
 value: 1000 # don't touch this value (points are admin-controlled)
 
+# ignore: true   # uncomment to stop syncing this challenge (won't be
+                 # (re)imported; delete an existing copy in the admin UI once)
+
 # A&D reuses the container block for the per-team SERVICE image + port.
 # containerImage omitted -> platform auto-builds ./src/Dockerfile.
 container:

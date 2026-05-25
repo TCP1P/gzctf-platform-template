@@ -13,6 +13,9 @@ description: |
 type: "DynamicContainer" # don't touch this value
 value: 1000 # don't touch this value (points are admin-controlled)
 
+# ignore: true   # uncomment to stop syncing this challenge (won't be
+                 # (re)imported; delete an existing copy in the admin UI once)
+
 container:
   # containerImage omitted -> platform auto-builds ./src/Dockerfile.
   # flagTemplate: [TEAM_HASH] is substituted per team to make each flag unique.
