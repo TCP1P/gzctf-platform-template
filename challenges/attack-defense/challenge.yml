@@ -25,18 +25,28 @@ container:
   storageLimit: 256
 
 # A&D per-challenge knobs — this service's own properties. All optional.
-# Event-wide policy (tick length, flag lifetime, reset cooldown, snapshot
-# download) is set ONCE on the game in admin settings, not per challenge —
-# rounds span the whole game, so every service shares one tick.
+# Event-wide policy (tick length, flag lifetime, warmup, reset cooldown,
+# snapshot) is set ONCE per event in the `ad:` block of the .gzevent manifest
+# (see ../.gzevent) — rounds span the whole game, so every service shares one
+# tick; those belong on the event, not here.
 ad:
   # Checker image speaking the enochecker3 exit-code contract
   # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and
   # push it to your registry, then uncomment the ref below. Omit entirely to
   # fall back to a plain TCP-reachability probe (no flag-correctness check).
+  # NOTE: use a REGISTRY ref (not a local-only tag) so the cluster/daemon can
+  # pull it — local-only checker images can be reaped by image-prune jobs.
   # checkerImage: "ghcr.io/your-org/attack-defense-checker:latest"
   # Can this service reach the public internet? Default true (open). Set
   # false to sandbox a service that should have no egress.
   allowEgress: true
   # Can teams self-reset THIS service's container? Default true. (The reset
-  # cooldown itself is the game-wide knob.)
+  # cooldown itself is the event-wide knob — see .gzevent.)
   allowSelfReset: true
+  # Checker timing (anti-fingerprinting). All optional; defaults shown.
+  # putflagWindowFraction: 0.4   # plant the flag at a random point in the
+  #                              # first 40% of each tick
+  # getflagWindowFraction: 0.5   # retrieve it at a random point within 50% of
+  #                              # the tick after the grace period
+  # minGracePeriodSeconds: 3     # wait this long after putflag before getflag,
+  #                              # so a slow service isn't checked too early
