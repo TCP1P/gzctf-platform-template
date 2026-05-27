@@ -1,10 +1,11 @@
 FROM python:3.12-alpine
 
-# Warmup flag — the platform overwrites /flag every tick via docker exec.
-# Read the flag from /flag at request time (path also in GZCTF_FLAG_FILE);
-# there is no GZCTF_FLAG env var for the service (it would freeze at start).
-RUN echo 'flag{warmup-no-round-yet}' > /flag && chmod 644 /flag
-
+# No baked flag. The platform supplies the live, rotating flag at the path in
+# $GZCTF_FLAG_FILE (Docker: /flag bind-mount; Kubernetes: /gzctf-flag/flag,
+# written by the flag-pull sidecar). ALWAYS read $GZCTF_FLAG_FILE — a service
+# that hardcodes /flag works on Docker but serves a stale value on K8s. There
+# is no GZCTF_FLAG env var for the service (it would freeze at start). Treat a
+# missing file as "no flag yet" (warmup, before the first flag is planted).
 COPY service.py /service.py
 
 EXPOSE 80
