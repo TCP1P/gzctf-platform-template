@@ -11,7 +11,12 @@ description: |
   checker.
 
 type: "AttackDefense" # don't touch this value
-value: 1000 # don't touch this value (points are admin-controlled)
+
+# `value` / `minScoreRate` / `difficulty` intentionally omitted — A&D is
+# live-scored (attack + defense + SLA per tick), and the platform overrides
+# ChallengeInfo.Score to 0 for AD-engine challenges so the UI doesn't render
+# a "pts" value that would be misleading here. Defaults on the server are
+# fine; setting them per-challenge has no effect on A&D scoring.
 
 # ignore: true   # uncomment to stop syncing this challenge (won't be
                  # (re)imported; delete an existing copy in the admin UI once)
