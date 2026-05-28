@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "static-attachment"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example files-only challenge. Players download everything under ./dist;
+  the flag is matched server-side against the flags: list below. Use this
+  type for crypto / reverse / forensics / misc — anything that doesn't
+  need a live server.
+
+type: "StaticAttachment" # don't touch this value
+
+# `value` / `minScoreRate` / `difficulty` omitted — fine to add per challenge
+# if you want explicit first-blood-decay tuning (defaults: originalScore=1000,
+# minScoreRate=0.25, difficulty=5). For most jeopardy-style challenges the
+# defaults work; uncomment + tune only if you want a different starting score
+# or a steeper / flatter decay curve.
+
+# ignore: true   # uncomment to stop syncing this challenge (won't be
+                 # (re)imported; delete an existing copy in the admin UI once)
+
+# One or more accepted flags. Every team submits the SAME flag (static).
+flags:
+  - "flag{replace-me}"
+
+# Directory handed to players for download. Put your attachment files in
+# ./dist; the platform packages them.
+provide: "./dist"

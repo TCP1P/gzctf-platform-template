@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "attack-defense"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example Attack & Defense service. The platform plants a fresh flag into
+  /flag every tick; your service must expose it only to whoever holds the
+  intended capability, and defenders patch the bug without breaking the
+  checker.
+
+type: "AttackDefense" # don't touch this value
+
+# `value` / `minScoreRate` / `difficulty` intentionally omitted — A&D is
+# live-scored (attack + defense + SLA per tick), and the platform overrides
+# ChallengeInfo.Score to 0 for AD-engine challenges so the UI doesn't render
+# a "pts" value that would be misleading here. Defaults on the server are
+# fine; setting them per-challenge has no effect on A&D scoring.
+
+# ignore: true   # uncomment to stop syncing this challenge (won't be
+                 # (re)imported; delete an existing copy in the admin UI once)
+
+# A&D reuses the container block for the per-team SERVICE image + port.
+# containerImage omitted -> platform auto-builds ./src/Dockerfile.
+container:
+  exposePort: 80
+  memoryLimit: 256
+  cpuCount: 1
+  storageLimit: 256
+
+# A&D per-challenge knobs — this service's own properties. All optional.
+# Event-wide policy (tick length, flag lifetime, warmup, reset cooldown,
+# snapshot) is set ONCE per event in the `ad:` block of the .gzevent manifest
+# (see ../.gzevent) — rounds span the whole game, so every service shares one
+# tick; those belong on the event, not here.
+ad:
+  # Checker image speaking the enochecker3 exit-code contract
+  # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and
+  # push it to your registry, then uncomment the ref below. Omit entirely to
+  # fall back to a plain TCP-reachability probe (no flag-correctness check).
+  # NOTE: use a REGISTRY ref (not a local-only tag) so the cluster/daemon can
+  # pull it — local-only checker images can be reaped by image-prune jobs.
+  # checkerImage: "ghcr.io/your-org/attack-defense-checker:latest"
+  # Can this service reach the public internet? Default true (open). Set
+  # false to sandbox a service that should have no egress.
+  allowEgress: true
+  # Can teams self-reset THIS service's container? Default true. (The reset
+  # cooldown itself is the event-wide knob — see .gzevent.)
+  allowSelfReset: true
+  # Checker timing (anti-fingerprinting). All optional; defaults shown.
+  # putflagWindowFraction: 0.4   # plant the flag at a random point in the
+  #                              # first 40% of each tick
+  # getflagWindowFraction: 0.5   # retrieve it at a random point within 50% of
+  #                              # the tick after the grace period
+  # minGracePeriodSeconds: 3     # wait this long after putflag before getflag,
+  #                              # so a slow service isn't checked too early

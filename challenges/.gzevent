@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/gzevent.schema.yaml
+
+# Example event (.gzevent) manifest.
+#
+# The GZCTF repo scanner (admin → Repo Bindings) discovers this file and
+# creates/updates a Game from it; every challenge.yml under this directory
+# (attack-defense/, dynamic-container/, static-attachment/, ...) is imported
+# into that game. Imported challenges stay HIDDEN until you enable them in the
+# admin UI.
+
+title: "Example A&D Event"
+summary: "Attack & Defense demo — keep your service up, steal flags, patch bugs."
+content: |
+  ## Example Attack & Defense event
+
+  Each team runs the same vulnerable service. The platform plants a fresh flag
+  into every service each tick; capture other teams' flags and submit them
+  while defending (and patching) your own.
+
+# ISO-8601. Local offsets are fine — normalized to UTC on import.
+start: "2026-06-01T09:00:00+07:00"
+end: "2026-06-01T17:00:00+07:00"
+
+hidden: true               # keep hidden until you flip it in the admin UI
+practiceMode: true
+acceptWithoutReview: false
+teamMemberCountLimit: 5
+containerCountLimit: 5
+
+# Event-wide Attack & Defense settings — shared by EVERY A&D challenge in this
+# event (rounds span the whole game, so the tick is per-event, not per-service).
+# All optional; omitted keys keep the platform defaults shown in the comments.
+# Per-service knobs (checker image, egress, self-reset, jitter/grace) live in
+# each challenge's own `ad:` block — see attack-defense/challenge.yml.
+ad:
+  tickSeconds: 120             # round length in seconds (default 60)
+  flagLifetimeTicks: 5         # ticks a planted flag stays submittable (default 5)
+  warmupSeconds: 600           # grace after start before scoring begins (default 1800)
+  resetCooldownMinutes: 5      # min minutes between a team's self-resets (default 5)
+  allowSnapshotDownload: true  # let teams download the post-game snapshot (default true)
+  # snapshotRetentionDays: 30  # auto-delete snapshots after N days (default: keep forever)
