@@ -1,10 +1,11 @@
 FROM python:3.12-alpine
 
 # supervisor runs as PID 1 (see supervisord.conf) so the service runs as a child:
-# it can crash or be restarted in place WITHOUT the container exiting, which lets
-# an operator "restart" the box while keeping the team's filesystem changes
-# (patches). Recreating the pod/container instead ("Reset") reverts to this
-# image. Installed via pip so it reuses the image's existing python.
+# if it crashes, supervisord auto-restarts it in place WITHOUT the container
+# exiting, so a botched exploit won't drop the box and the team keeps its
+# filesystem patches. NOTE: the platform has no in-place restart action — the
+# operator "Force Restart" / team "Reset" destroys + recreates the container from
+# this image (new IP), losing patches. Installed via pip to reuse the image python.
 RUN pip install --no-cache-dir supervisor
 
 # No baked flag. The platform supplies the live, rotating flag at the path in

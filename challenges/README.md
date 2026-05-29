@@ -5,8 +5,9 @@ edit it, then either:
 
 - **`gzcli`** — push from this repo, or
 - **Web upload** — zip the folder and drop it at
-  `https://PUBLIC_ENTRY/games/<id>/submit` (the in-app submit page offers
-  the same templates as one-click downloads).
+  `https://PUBLIC_ENTRY/games/<id>/submit` (requires an admin to enable
+  **Allow user submissions** for that game in admin → game → Info; otherwise the
+  page is disabled and the API returns 403).
 
 The `value:` and any `visible:`/`enabled:` fields in `challenge.yml` are
 ignored on import — points + visibility are admin-controlled after review.
@@ -28,8 +29,9 @@ so deleting it once in the UI sticks. It does **not** delete an
 already-imported copy — remove that in the UI (or it just stops receiving
 updates). Drop the key to start syncing again.
 
-Three types are scaffolded here, matching the one-click templates on the
-submit page:
+Four types are scaffolded here; the first three are also one-click downloads on
+the submit page (KingOfTheHill has no download button — zip the folder and
+upload it):
 
 | Folder | `type:` | Use for |
 |---|---|---|
@@ -119,9 +121,10 @@ empty to fall back to a plain TCP-reachability probe — services that
 respond on their port score SLA `Ok`, silent ones score `Offline`, with
 no flag-correctness (`Mumble`) distinction.
 
-**Egress** — `ad.allowEgress: false` (default) sandboxes team containers
-off the public internet. Flip to `true` only for services that genuinely
-need an outbound call.
+**Egress** — `ad.allowEgress: true` (default) lets team containers reach the
+public internet — most A&D services expect outbound access (private and
+link-local ranges are blocked regardless). Set it to `false` to sandbox a
+service that should have no egress at all.
 
 **Event-wide settings** — tick length, flag lifetime, reset cooldown, and
 snapshot-download are **game** settings (admin → game → Info), not
@@ -170,7 +173,9 @@ Same harness + push rules as A&D. Omit `ad.checkerImage` for a TCP-reachability
 probe.
 
 **`allowSelfReset` must be false** — the hill is shared, so a team self-reset
-would wipe everyone's progress. KotH wipes are governed by the game-level
-refresh setting; that, hold-points-per-tick, and the leader cooldown are KotH
-scoring knobs set in the admin UI after import (they aren't carried in the
-`.gzevent` manifest — the shared `ad:` tick block does apply to KotH).
+would wipe everyone's progress. KotH wipes are governed by the game-level refresh
+setting. That refresh interval (default 5 ticks) and hold-points-per-tick
+(default 1.0) are **currently fixed at their defaults**: they are neither carried
+in the `.gzevent` manifest nor exposed in the admin UI, so tuning them today means
+editing the `Game` row directly (`KothRefreshTicks` / `KothHoldPointsPerTick`).
+The shared `ad:` tick block (tick length, warmup) *does* apply to KotH.

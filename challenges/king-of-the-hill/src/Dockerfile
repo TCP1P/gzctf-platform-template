@@ -1,9 +1,9 @@
 FROM python:3.12-alpine
 
 # supervisor runs as PID 1 (see supervisord.conf) so the service runs as a child:
-# it can crash or be restarted in place WITHOUT the container exiting, which lets
-# an operator "restart" the hill while keeping filesystem state. Recreating the
-# container instead reverts to this image (and clears /koth/king).
+# if it crashes, supervisord auto-restarts it in place WITHOUT the container
+# exiting, keeping the hill up. The platform has no in-place restart — recreating
+# the container (or a hill refresh) reverts to this image and clears /koth/king.
 RUN pip install --no-cache-dir supervisor
 
 # KotH has no per-team flag — nothing to bind-mount. The only platform contract

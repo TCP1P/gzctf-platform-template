@@ -33,9 +33,11 @@ container:
 # is run with no flag.
 #
 # Event-wide round timing (tickSeconds, warmup, …) is shared with A&D via the
-# `ad:` block in ../.gzevent. KotH SCORING — hold points per tick, the N-tick
-# refresh that wipes the hill, the leader cooldown — is game-level and set in
-# the admin UI after import (it is not carried in the .gzevent manifest).
+# `ad:` block in ../.gzevent. KotH SCORING — hold points per tick (default 1.0)
+# and the N-tick refresh that wipes the hill (default 5) — is game-level but
+# currently FIXED at those defaults: it is neither carried in the .gzevent
+# manifest nor exposed in the admin UI, so changing it means editing the Game row
+# directly (Game.KothHoldPointsPerTick / Game.KothRefreshTicks).
 ad:
   # Health checker speaking the enochecker3 exit-code contract
   # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and push
