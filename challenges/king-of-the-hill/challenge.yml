@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dimasma0305/gzcli/refs/heads/main/internal/template/templates/others/ctf-template/.gzctf/challenge.schema.yaml
+
+name: "king-of-the-hill"
+author: "your-name"
+
+# supports markdown & html tags
+description: |
+  Example King of the Hill challenge. A single SHARED service — the "hill" —
+  that every team races to control. Each round the platform issues you a
+  fresh control token; exploit the hill to write that token into the marker
+  file `/koth/king`. The platform reads `/koth/king` every tick: while it
+  holds YOUR token AND the hill is still functional, you earn hold points.
+  Hold a broken hill (checker not Ok) and you take a penalty instead.
+
+type: "KingOfTheHill" # don't touch this value
+value: 1000 # don't touch this value (KotH is hold-scored, not flag-scored)
+
+# ignore: true   # uncomment to stop syncing this challenge
+
+# KotH runs on the A&D engine, so it reuses the container block — but unlike
+# A&D there is ONE shared hill container for the whole game (not one per team).
+# containerImage omitted -> platform auto-builds ./src/Dockerfile.
+container:
+  exposePort: 80
+  memoryLimit: 256
+  cpuCount: 1
+  storageLimit: 256
+
+# KotH per-challenge knobs. NOTE: KotH has no per-team flag — the platform
+# decides who is king by reading the marker file `/koth/king` from the hill
+# itself, and uses the checker ONLY as a health probe (Ok = hill works /
+# Mumble = degraded / Offline = down). So the checker here is health-only; it
+# is run with no flag.
+#
+# Event-wide round timing (tickSeconds, warmup, …) is shared with A&D via the
+# `ad:` block in ../.gzevent. KotH SCORING — hold points per tick, the N-tick
+# refresh that wipes the hill, the leader cooldown — is game-level and set in
+# the admin UI after import (it is not carried in the .gzevent manifest).
+ad:
+  # Health checker speaking the enochecker3 exit-code contract
+  # (0 Ok / 1 Mumble / 2 Offline / 3 InternalError). Build ./checker and push
+  # it to your registry, then uncomment the ref. Omit to fall back to a plain
+  # TCP-reachability probe. Use a REGISTRY ref (local-only tags get reaped).
+  # checkerImage: "ghcr.io/your-org/king-of-the-hill-checker:latest"
+
+  # Does the hill need to reach the public internet? Almost always false: the
+  # hill is a TARGET teams exploit from outside, it never calls out itself.
+  allowEgress: false
+
+  # MUST stay false: the hill is SHARED, so letting one team reset it would
+  # wipe every team's foothold + the current king. (KotH wipes are governed by
+  # the game-level refresh setting, not team self-reset.)
+  allowSelfReset: false

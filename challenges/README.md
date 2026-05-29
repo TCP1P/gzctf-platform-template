@@ -36,6 +36,7 @@ submit page:
 | [`static-attachment/`](static-attachment/) | `StaticAttachment` | files-only (crypto, reverse, forensics, misc) — no server |
 | [`dynamic-container/`](dynamic-container/) | `DynamicContainer` | one container per team, unique flag via `GZCTF_FLAG` (pwn, web) |
 | [`attack-defense/`](attack-defense/) | `AttackDefense` | persistent service + checker, flag rotates each tick |
+| [`king-of-the-hill/`](king-of-the-hill/) | `KingOfTheHill` | one SHARED hill; teams plant a per-round token in `/koth/king` to hold it (health-checked, no flag) |
 
 Every folder follows the same layout: `challenge.yml` + `src/` (the
 challenge, auto-built from `./src/Dockerfile` when it's a container) +
@@ -127,3 +128,49 @@ snapshot-download are **game** settings (admin → game → Info), not
 per-challenge. A round spans the whole game, so every A&D service shares
 one tick. The challenge `ad:` block only carries the service's own
 properties (`checkerImage`, `allowEgress`, `allowSelfReset`).
+
+## king-of-the-hill/
+
+A King of the Hill challenge — one SHARED service every team fights to control:
+
+```
+king-of-the-hill/
+├── challenge.yml     # type: KingOfTheHill + container (the hill) + ad (health checker)
+├── src/              # the SHARED hill (platform auto-builds ./src/Dockerfile)
+│   ├── Dockerfile    # exposes a writable marker at /koth/king; no flag
+│   └── service.py    # toy hill — REPLACE the open POST /king with a real vuln
+├── checker/          # HEALTH checker (no flag) — same harness as A&D
+│   ├── Dockerfile
+│   ├── checker.py    # harness (don't edit)
+│   ├── checks.py     # ADD HEALTH CHECKS HERE (flag-free)
+│   ├── run.py
+│   └── requirements.txt
+└── solver/
+    └── solve.py      # fetch your round token, exploit the hill to plant it
+```
+
+**How KotH scores** — there is no flag. Each round the platform issues every
+team a control token (`GET /api/Game/{id}/Ad/Koth/{cId}/Token`). A team's
+exploit must land that token in the marker file `/koth/king` on the hill. Each
+tick the platform reads `/koth/king`, matches it to the team it was issued to,
+and — if the checker also says the hill is `Ok` — credits that team hold
+points; holding a *broken* hill (checker not `Ok`) costs a penalty instead. The
+token rotates every round, so teams must re-plant continually.
+
+**The marker is `/koth/king`** — keep it at exactly that path: the platform
+reads it from the container itself (you do NOT return it from the checker). The
+`src/` toy hill ships an intentionally trivial `POST /king` write so it runs
+out of the box — **replace it with your real vulnerability**; the whole
+challenge is making the write to `/koth/king` something teams must earn.
+
+**Checker is health-only** — KotH runs your checker with no flag, purely to
+decide `Ok` / `Mumble` / `Offline` (which gates hold points vs penalty). Put
+flag-free health assertions in `checker/checks.py` (don't reference `t.flag`).
+Same harness + push rules as A&D. Omit `ad.checkerImage` for a TCP-reachability
+probe.
+
+**`allowSelfReset` must be false** — the hill is shared, so a team self-reset
+would wipe everyone's progress. KotH wipes are governed by the game-level
+refresh setting; that, hold-points-per-tick, and the leader cooldown are KotH
+scoring knobs set in the admin UI after import (they aren't carried in the
+`.gzevent` manifest — the shared `ad:` tick block does apply to KotH).
