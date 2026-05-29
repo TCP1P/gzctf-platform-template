@@ -101,12 +101,14 @@ else
     fi
 fi
 
-# Generate the A&D SSH jump-host internal secret if missing. gzctf
-# (Ad:Ssh:InternalSecret) and the ssh-jump sidecar (INTERNAL_SECRET) must
-# SHARE this value, and the platform REFUSES the shipped placeholder — so
-# `ssh <challenge-id>@host -p 22022` stays disabled until a real one exists.
-# 64 hex chars = 256 bits.
-if [ -z "${AD_SSH_INTERNAL_SECRET:-}" ]; then
+# A&D SSH jump-host internal secret. gzctf reads it from appsettings.json
+# (Ad:Ssh:InternalSecret, substituted below); the ssh-jump sidecar reads it from .env
+# (INTERNAL_SECRET=$AD_SSH_INTERNAL_SECRET). We write the SAME value to BOTH, exactly
+# like XorKey, so they can't diverge. The platform REFUSES the shipped placeholder, so a
+# real value is required or `ssh <challenge-id>@host -p 22022` stays disabled. 256 bits.
+if [ -n "${AD_SSH_INTERNAL_SECRET:-}" ]; then
+    SSH_SECRET="$AD_SSH_INTERNAL_SECRET"
+else
     if command -v openssl >/dev/null 2>&1; then
         SSH_SECRET="$(openssl rand -hex 32)"
     elif [ -r /dev/urandom ]; then
@@ -178,11 +180,15 @@ escape_sed() {
 PUBLIC_ENTRY_ESC=$(escape_sed "$PUBLIC_ENTRY")
 XK_ESC=$(escape_sed "$XK")
 PG_ESC=$(escape_sed "$POSTGRES_PASSWORD")
+SSH_SECRET_ESC=$(escape_sed "$SSH_SECRET")
+SSH_PORT="${AD_SSH_PUBLIC_PORT:-22022}"
 
 sed \
     -e "s|{{\\.PublicEntry}}|$PUBLIC_ENTRY_ESC|g" \
     -e "s|{{\\.XorKey}}|$XK_ESC|g" \
     -e "s|{{\\.PostgresPassword}}|$PG_ESC|g" \
+    -e "s|{{\\.AdSshInternalSecret}}|$SSH_SECRET_ESC|g" \
+    -e "s|{{\\.AdSshPublicPort}}|$SSH_PORT|g" \
     appsettings.example.json > appsettings.json
 
 chmod 600 appsettings.json
