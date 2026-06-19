@@ -43,7 +43,15 @@ ad:
   # Can teams self-reset THIS service's container? Default true. (The reset
   # cooldown itself is the event-wide knob — see .gzevent.)
   allowSelfReset: true
-  # Checker timing (anti-fingerprinting). All optional; defaults shown.
+  # Bring-your-own-container (BYOC / self-hosted). Default false = the platform
+  # hosts one copy of this service per team. Set true to have each team run the
+  # service on THEIR OWN machine instead: the platform launches only a tunnel
+  # relay, and the team opens the challenge → "Download setup.sh" → `sh setup.sh`
+  # to pull the service image + an agent and connect it. The SLA checker, attack
+  # proxy, flag rotation and scoreboard all work unchanged. Docker provider only
+  # (the relay launch is skipped on Kubernetes). See the README "Bring your own
+  # container" section.
+  # selfHosted: true
   # putflagWindowFraction: 0.4   # plant the flag at a random point in the
   #                              # first 40% of each tick
   # getflagWindowFraction: 0.5   # retrieve it at a random point within 50% of
